@@ -43,6 +43,7 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
       waiting: data.items.filter(x => x.status === "waiting"),
       paused: data.items.filter(x => x.status === "paused"),
       done: data.items.filter(x => x.status === "done"),
+      <button data-del="${item.id}">🗑</button>
     };
 
     const renderGroup = (arr) => arr.map(item => `
@@ -69,6 +70,16 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
         renderLists();
       };
     });
+    
+    root.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.onclick = () => {
+       const id = btn.dataset.del;
+       data.items = data.items.filter(it => it.id !== id);
+       saveNow();
+      renderLists();
+    };
+});
+
   }
 
   function renderRecurring() {
