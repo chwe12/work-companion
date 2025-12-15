@@ -1,5 +1,4 @@
 /* assets/styles.css */
-/* [此為通用領域知識，非來源直接陳述] */
 
 body { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; margin: 0; background:#f6f7f9; }
 .nav { display:flex; gap:12px; padding:12px 16px; background:#fff; border-bottom:1px solid #e5e7eb; }
