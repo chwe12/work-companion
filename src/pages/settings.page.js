@@ -29,7 +29,7 @@ export function renderSettingsPage({ root, data, saveNow, importNow, resetNow })
 
       <div class="form">
         <label class="label">本週定義</label>
-        <div class="muted">週一～週日（已固定，符合你的需求）</div>
+        <div class="muted">週一～週日</div>
       </div>
     </section>
 
@@ -121,3 +121,4 @@ export function renderSettingsPage({ root, data, saveNow, importNow, resetNow })
     URL.revokeObjectURL(url);
   }
 }
+
