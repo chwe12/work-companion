@@ -1,7 +1,4 @@
 // src/core/time.js
-// 以本機時區(+Asia/Taipei)的 Date 來切週/月（你需求：週一～週日）
-// [根據你提供的需求] + [此為通用領域知識，非來源直接陳述]
-
 export function startOfWeekMonday(d = new Date()) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -42,3 +39,4 @@ export function formatYmd(d = new Date()) {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
+
