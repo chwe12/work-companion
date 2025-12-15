@@ -2,11 +2,6 @@
 import { on } from "../core/bus.js";
 import { startOfWeekMonday, endOfWeekSunday, startOfMonth, endOfMonth, inRange } from "../core/time.js";
 
-// 這個插件做兩件事：
-// 1) 提供 computeSnapshot(now) 給 dashboard.page.js 畫面渲染用
-// 2) 監聽事件，讓 dashboard 開著時會即時更新（可選，但你會想要）
-// [根據你提供的需求] + [此為通用領域知識，非來源直接陳述]
-
 export function registerDashboardPlugin({ data, notifyDashboard }) {
   function computeSnapshot(now = new Date()) {
     const wStart = startOfWeekMonday(now);
@@ -29,8 +24,6 @@ export function registerDashboardPlugin({ data, notifyDashboard }) {
       done: items.filter(x => x.status === "done").length,
     };
 
-    // Completed 清單：你要求「全部列出」
-    // 這裡照 doneAt 排序，最新在上
     const weekCompletedList = weekCompleted
       .slice()
       .sort((a, b) => new Date(b.doneAt).getTime() - new Date(a.doneAt).getTime());
@@ -50,7 +43,6 @@ export function registerDashboardPlugin({ data, notifyDashboard }) {
       week: {
         startedN: wStartedN,
         completedN: wCompletedN,
-        // 你指定 Started=0 顯示 0/0 且 0%
         completionText: `${wCompletedN}/${wStartedN}`,
         completionRatio: (wStartedN === 0) ? 0 : (wCompletedN / wStartedN),
         completedList: weekCompletedList,
