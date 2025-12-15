@@ -20,8 +20,8 @@ body { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; mar
 .progress { height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin:10px 0 6px; }
 .progress__bar { height:100%; background:#111827; }
 
-.chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-.chip { padding:6px 10px; border-radius:999px; border:1px solid #e5e7eb; font-size: 13px; background:#fff; }
+.chips { display:flex; flex-wrap:wrap; gap:12px; margin-top:14px; }
+.chip { padding:10px 16px; border-radius:999px; border:1px solid #e5e7eb; font-size: 15px; background:#fff; font-weight: 500; }
 .chip--active { }
 .chip--waiting { }
 .chip--paused { }
