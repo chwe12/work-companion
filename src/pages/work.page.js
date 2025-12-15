@@ -35,15 +35,15 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
     </section>
   `;
 
-  const $ = (id) => root.querySelector(id);
+  const $ = (sel) => root.querySelector(sel);
 
+  // ===== Work Items =====
   function renderLists() {
     const groups = {
       active: data.items.filter(x => x.status === "active"),
       waiting: data.items.filter(x => x.status === "waiting"),
       paused: data.items.filter(x => x.status === "paused"),
       done: data.items.filter(x => x.status === "done"),
-      <button data-del="${item.id}">🗑</button>
     };
 
     const renderGroup = (arr) => arr.map(item => `
@@ -54,6 +54,7 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
           <button data-id="${item.id}" data-to="waiting">W</button>
           <button data-id="${item.id}" data-to="paused">P</button>
           <button data-id="${item.id}" data-to="done">D</button>
+          <button data-del="${item.id}">🗑</button>
         </div>
       </div>
     `).join("");
@@ -63,6 +64,7 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
     $("#list-paused").innerHTML = renderGroup(groups.paused);
     $("#list-done").innerHTML = renderGroup(groups.done);
 
+    // 狀態切換
     root.querySelectorAll("button[data-id]").forEach(btn => {
       btn.onclick = () => {
         state.changeStatus(btn.dataset.id, btn.dataset.to);
@@ -70,28 +72,31 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
         renderLists();
       };
     });
-    
+
+    // 直接刪除（無確認）
     root.querySelectorAll("button[data-del]").forEach(btn => {
       btn.onclick = () => {
-       const id = btn.dataset.del;
-       data.items = data.items.filter(it => it.id !== id);
-       saveNow();
-      renderLists();
-    };
-});
-
+        const id = btn.dataset.del;
+        data.items = data.items.filter(it => it.id !== id);
+        saveNow();
+        renderLists();
+      };
+    });
   }
 
+  // ===== Recurring =====
   function renderRecurring() {
     if (!recurringApi) {
       $("#recList").innerHTML = `<div class="muted">（Recurring plugin 未載入）</div>`;
       return;
     }
+
     const list = recurringApi.listWithStatus();
     if (!list.length) {
       $("#recList").innerHTML = `<div class="muted">（尚無週期性事項）</div>`;
       return;
     }
+
     $("#recList").innerHTML = list.map(r => `
       <div class="item">
         <div>
@@ -115,10 +120,9 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
         renderRecurring();
       };
     });
+
     root.querySelectorAll("button[data-rec-del]").forEach(btn => {
       btn.onclick = () => {
-        const ok = confirm("確定要刪除這個週期性事項嗎？");
-        if (!ok) return;
         recurringApi.removeRecurring(btn.dataset.recDel);
         saveNow();
         renderRecurring();
@@ -126,6 +130,7 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
     });
   }
 
+  // ===== 新增工作 =====
   $("#addBtn").onclick = () => {
     const title = $("#newTitle").value.trim();
     if (!title) return;
@@ -135,11 +140,11 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
     renderLists();
   };
 
-  // Recurring 新增：name + anchorDueDate + periodDays
+  // ===== 新增 Recurring =====
   $("#recAddBtn").onclick = () => {
     if (!recurringApi) return;
     const name = $("#recName").value.trim();
-    const anchorDueDate = $("#recAnchor").value; // YYYY-MM-DD
+    const anchorDueDate = $("#recAnchor").value;
     const periodDays = Number($("#recPeriod").value);
     if (!name || !anchorDueDate || !Number.isFinite(periodDays) || periodDays < 1) return;
 
@@ -154,5 +159,8 @@ export function renderWorkPage({ root, data, state, saveNow, noticeText, recurri
 }
 
 function escapeHtml(s) {
-  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
