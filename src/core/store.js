@@ -6,7 +6,8 @@ const defaultData = {
     timezone: "Asia/Taipei",
     weekStart: "monday",
     wipLimitActive: 7,
-    upcomingDays: 3,          // Recurring「即將到期」預設 3 天
+    upcomingDays: 3,               // Recurring「即將到期」預設 3 天
+    calendarNoDuePolicy: "today",  // 無 dueAt：顯示在 today 或 createdDay
   },
   items: [],
   events: [],
