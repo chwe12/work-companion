@@ -5,6 +5,7 @@ import { createState } from "./core/state.js";
 import { renderWorkPage } from "./pages/work.page.js";
 import { renderDashboardPage } from "./pages/dashboard.page.js";
 import { renderSettingsPage } from "./pages/settings.page.js";
+import { renderCalendarPage } from "./pages/calendar.page.js";
 
 import { registerWipPlugin } from "./plugins/wip.plugin.js";
 import { registerDashboardPlugin } from "./plugins/dashboard.plugin.js";
@@ -66,6 +67,8 @@ const path = location.pathname.split("/").pop() || "index.html";
 
 if (path === "index.html") {
   renderWorkPage({ root, data, state, saveNow, noticeText, recurringApi });
+} else if (path === "calendar.html") {
+  renderCalendarPage({ root, data, state, saveNow, recurringApi });
 } else if (path === "dashboard.html") {
   renderDashboardPage({ root, data, dashboardApi, rerenderHook: dashboardRerenderHook });
 } else if (path === "settings.html") {
