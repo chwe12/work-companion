@@ -35,3 +35,133 @@ body { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; mar
 .kpi__label { color:#6b7280; }
 .kpi__value { font-weight:700; font-size:16px; }
 .kpiRow { display:flex; justify-content:space-between; margin-top:6px; }
+/* === Work Board (Trello-style) === */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 12px;
+
+  /* 關鍵：讓欄位撐滿視窗，不是整頁滾動 */
+  height: calc(100vh - 260px); /* 視 header 高度可微調 */
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.column h2 {
+  margin: 0 0 8px 0;
+}
+
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+
+/* ===== Work Board (3 columns) ===== */
+.board3{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.column{
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+}
+
+.column-body{
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dueInput{
+  margin-left: 6px;
+}
+
+.btnSmall{
+  margin-left: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+/* ===== Calendar (deadline-only) ===== */
+.cal { margin-top: 12px; }
+
+.cal__head{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.cal__grid{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.cal__cell{
+  text-align: left;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px;
+  padding: 10px;
+  background: transparent;
+  cursor: pointer;
+  min-height: 110px;
+}
+
+.cal__cell--out{ opacity: .45; }
+.cal__cell--today{ outline: 2px solid rgba(0,0,0,.25); }
+.cal__cell--selected{ outline: 3px solid rgba(0,0,0,.45); }
+
+.cal__day{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.cal__count{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.18);
+  font-size: 12px;
+}
+
+.cal__mini{ display: grid; gap: 4px; }
+.cal__miniItem{
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal__miniItem--done{ opacity: .55; text-decoration: line-through; }
+.cal__more{ font-size: 12px; }
+/* Calendar → Work focus highlight */
+.focus-item{
+  outline: 3px solid rgba(0,0,0,.45);
+  background: rgba(0,0,0,.04);
+}
+
+/* 小按鈕（如果你已經有 btnSmall 可略過） */
+.btnSmall{
+  padding: 2px 8px;
+  font-size: 12px;
+}
