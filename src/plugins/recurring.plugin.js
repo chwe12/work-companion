@@ -3,114 +3,201 @@ import { emit } from "../core/bus.js";
 import { formatYmd } from "../core/time.js";
 
 export function registerRecurringPlugin({ data }) {
+  // ---- ensure data shapes ----
+  if (!data.recurring) data.recurring = [];
+  if (!data.events) data.events = [];
+
+  // ---- date helpers (all in local time, ymd only) ----
   function todayYmd() {
     return formatYmd(new Date());
   }
 
   function parseYmd(ymd) {
-    // ymd: YYYY-MM-DD
-    const [y, m, d] = ymd.split("-").map(Number);
-    return new Date(y, m - 1, d, 0, 0, 0, 0);
+    const [y, m, d] = String(ymd).split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
   }
 
   function addDaysYmd(ymd, days) {
     const dt = parseYmd(ymd);
-    dt.setDate(dt.getDate() + days);
+    dt.setDate(dt.getDate() + Number(days || 0));
     return formatYmd(dt);
   }
 
   function diffDays(aYmd, bYmd) {
-    // b - a (days)
+    // a - b in days
     const a = parseYmd(aYmd).getTime();
     const b = parseYmd(bYmd).getTime();
-    return Math.round((b - a) / (24 * 3600 * 1000));
+    return Math.floor((a - b) / 86400000);
   }
 
-  function ensureRecurringShape(r) {
-    // 兼容舊資料
-    if (!r.anchorDueDate) r.anchorDueDate = r.nextDueDate;
-    if (!r.periodDays) r.periodDays = 14;
-    return r;
+  function clampPeriodDays(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 1) return 1;
+    return Math.floor(n);
   }
 
+  // ---- core rule: fixed anchor cycle ----
+  // Return the next occurrence date (YYYY-MM-DD) that is >= baseYmd
+  // aligned to anchorDueDate + k*periodDays.
+  function computeNextDueDateFixedAnchor(anchorDueDate, periodDays, baseYmd) {
+    const anchor = parseYmd(anchorDueDate);
+    const base = parseYmd(baseYmd);
+
+    const period = clampPeriodDays(periodDays);
+
+    // if anchor is already >= base, next is anchor
+    if (anchor.getTime() >= base.getTime()) return formatYmd(anchor);
+
+    const diff = Math.floor((base.getTime() - anchor.getTime()) / 86400000);
+    const k = Math.floor(diff / period) + 1;
+
+    const next = new Date(anchor);
+    next.setDate(anchor.getDate() + k * period);
+    return formatYmd(next);
+  }
+
+  // ---- API ----
   function createRecurring({ name, periodDays, anchorDueDate }) {
-    const id = crypto.randomUUID();
-    const nowIso = new Date().toISOString();
-    const nextDueDate = anchorDueDate; // 初始 next = anchor
+    const nm = String(name || "").trim();
+    const anchor = String(anchorDueDate || "").trim();
+    const period = clampPeriodDays(periodDays);
 
-    const item = ensureRecurringShape({
-      id,
-      name,
-      periodDays,
-      anchorDueDate,
-      nextDueDate,
-      lastDoneAt: null,
+    if (!nm) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(anchor)) return;
+
+    const nowIso = new Date().toISOString();
+    const t = todayYmd();
+
+    const r = {
+      id: crypto.randomUUID(),
+      name: nm,
+      periodDays: period,
+      anchorDueDate: anchor,
+      nextDueDate: computeNextDueDateFixedAnchor(anchor, period, t),
       createdAt: nowIso,
       updatedAt: nowIso,
+    };
+
+    data.recurring.push(r);
+
+    data.events.push({
+      id: crypto.randomUUID(),
+      type: "recurring_create",
+      recurringId: r.id,
+      at: nowIso,
     });
 
-    data.recurring.push(item);
-    emit({ type: "recurring_add", recurringId: id, at: nowIso });
-    return id;
+    emit({ type: "recurring_create", recurringId: r.id, at: nowIso });
   }
 
-  function computeNextDueDateFixedAnchor(r, fromYmd) {
-    // 固定 anchor：next = anchor + ceil((from-anchor+1)/period)*period
-    const anchor = r.anchorDueDate;
-    const p = r.periodDays;
-
-    const delta = diffDays(anchor, fromYmd); // from - anchor
-    // 若 from <= anchor：next 就是 anchor
-    if (delta < 0) return anchor;
-
-    // 已經到 anchor 之後：找下一個 strictly after from
-    // k = floor(delta/p) + 1
-    const k = Math.floor(delta / p) + 1;
-    return addDaysYmd(anchor, k * p);
-  }
-
-  function markDone(recurringId) {
-    const r = data.recurring.find(x => x.id === recurringId);
+  function updateRecurring(id, patch) {
+    const r = data.recurring.find((x) => x.id === id);
     if (!r) return;
-    ensureRecurringShape(r);
+
+    // patch: { name?, periodDays?, anchorDueDate? }
+    if (patch && typeof patch.name === "string") {
+      const nm = patch.name.trim();
+      if (nm) r.name = nm;
+    }
+
+    if (patch && patch.periodDays != null) {
+      r.periodDays = clampPeriodDays(patch.periodDays);
+    }
+
+    if (patch && typeof patch.anchorDueDate === "string") {
+      const anchor = patch.anchorDueDate.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(anchor)) r.anchorDueDate = anchor;
+    }
+
+    // recompute next due from today
+    const t = todayYmd();
+    r.nextDueDate = computeNextDueDateFixedAnchor(r.anchorDueDate, r.periodDays, t);
 
     const nowIso = new Date().toISOString();
-    const today = todayYmd();
-
-    r.lastDoneAt = nowIso;
-
-    // 依「固定 anchor」推下一次（不漂移）
-    r.nextDueDate = computeNextDueDateFixedAnchor(r, today);
     r.updatedAt = nowIso;
 
-    emit({ type: "recurring_done", recurringId, at: nowIso, nextDueDate: r.nextDueDate });
+    data.events.push({
+      id: crypto.randomUUID(),
+      type: "recurring_edit",
+      recurringId: r.id,
+      at: nowIso,
+    });
+
+    emit({ type: "recurring_edit", recurringId: r.id, at: nowIso });
   }
 
-  function removeRecurring(recurringId) {
-    const idx = data.recurring.findIndex(x => x.id === recurringId);
+  function markDone(id) {
+    const r = data.recurring.find((x) => x.id === id);
+    if (!r) return;
+
+    const t = todayYmd();
+    const nowIso = new Date().toISOString();
+
+    // If user marks done early (nextDueDate is in the future),
+    // advance from that scheduled date by one period.
+    // Otherwise, advance to the next cycle after today.
+    const nd = r.nextDueDate || computeNextDueDateFixedAnchor(r.anchorDueDate, r.periodDays, t);
+    const daysToNext = diffDays(nd, t); // nd - today
+
+    if (daysToNext > 0) {
+      // early done: push one full period from current nextDueDate
+      r.nextDueDate = addDaysYmd(nd, r.periodDays);
+    } else {
+      // due today or overdue: compute next >= tomorrow
+      const tomorrow = addDaysYmd(t, 1);
+      r.nextDueDate = computeNextDueDateFixedAnchor(r.anchorDueDate, r.periodDays, tomorrow);
+    }
+
+    r.updatedAt = nowIso;
+
+    data.events.push({
+      id: crypto.randomUUID(),
+      type: "recurring_done",
+      recurringId: r.id,
+      at: nowIso,
+    });
+
+    emit({ type: "recurring_done", recurringId: r.id, at: nowIso });
+  }
+
+  function removeRecurring(id) {
+    const idx = data.recurring.findIndex((x) => x.id === id);
     if (idx < 0) return;
+
+    const nowIso = new Date().toISOString();
     data.recurring.splice(idx, 1);
-    emit({ type: "recurring_remove", recurringId, at: new Date().toISOString() });
+
+    data.events.push({
+      id: crypto.randomUUID(),
+      type: "recurring_remove",
+      recurringId: id,
+      at: nowIso,
+    });
+
+    emit({ type: "recurring_remove", recurringId: id, at: nowIso });
   }
 
-  function listWithStatus() {
-    const today = todayYmd();
-    const upcomingDays = data.settings?.upcomingDays ?? 3;
+  function listWithStatus({ upcomingDays = 3 } = {}) {
+    const t = todayYmd();
 
-    return data.recurring.map(raw => {
-      const r = ensureRecurringShape(raw);
-      const daysLeft = diffDays(today, r.nextDueDate); // nextDue - today
-      let badge = "";
-      if (daysLeft < 0) badge = `逾期 ${Math.abs(daysLeft)} 天`;
-      else if (daysLeft === 0) badge = "今天到期";
-      else if (daysLeft <= upcomingDays) badge = `即將到期（${daysLeft} 天）`;
+    return (data.recurring || [])
+      .map((r) => {
+        const next = r.nextDueDate || computeNextDueDateFixedAnchor(r.anchorDueDate, r.periodDays, t);
+        const daysLeft = diffDays(next, t);
 
-      return { ...r, daysLeft, badge };
-    }).sort((a, b) => a.daysLeft - b.daysLeft);
+        let badge = "";
+        if (daysLeft < 0) badge = `已逾期（${Math.abs(daysLeft)} 天）`;
+        else if (daysLeft === 0) badge = "今天到期";
+        else if (daysLeft <= upcomingDays) badge = `即將到期（${daysLeft} 天）`;
+
+        return { ...r, nextDueDate: next, daysLeft, badge };
+      })
+      .sort((a, b) => a.daysLeft - b.daysLeft);
   }
 
   return {
     createRecurring,
+    updateRecurring,
     markDone,
     removeRecurring,
     listWithStatus,
